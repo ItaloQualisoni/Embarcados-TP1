@@ -9,12 +9,11 @@ Doc class     : [10pt]article
 [TITLE]
 
 # Algoritmos  { #sec-algoritmo }
-
+Neste trabalho será comparado dois algoritmos de escalonamento 
 ##Rate-Monotonic { #sec-algoritmo-rm }
 
 ##Earliest Deadline First { #sec-algoritmo-edf }
-
-# Vantagens
+Leva em consideração o deadline da task na hora de escalonar, ignorando sua prioridade. As vezes 
 
 # Parte 1 
 
@@ -90,32 +89,10 @@ uint8_t HF_TaskReschedule(void){
 
 
 # Parte 2
+Abaixo estão descritos três exemplos de escalonamentos comparando os algoritmos.
 
 # Exemplo 1
 Neste primeiro exemplo foi abordado um cenário onde o algoritmo EDF se destaca em relação ao RM por conseguir escalonar todas as tarefas por utilizar periodos harmonicos entre as tarefas.  
-
-``` cpp
-#include <prototypes.h>
-
-void task(void){
-	int32_t tid;
-
-	tid = HF_CurrentTaskId();
-	for (;;){
-		printf("T%d", tid);
-	}
-}
-
-void ApplicationMain(void){
-	//period,capacity,deadline,description...
-	HF_AddPeriodicTask(task, 10, 3, 10, "task1", 2048, 0, 0);
-	HF_AddPeriodicTask(task, 15, 2, 15, "task2", 2048, 0, 0);
-	HF_AddPeriodicTask(task, 20, 5, 20, "task3", 2048, 0, 0);
-	HF_AddPeriodicTask(task, 25, 5, 25, "task4", 2048, 0, 0);
-	HF_AddPeriodicTask(task, 30, 2, 30, "task5", 2048, 0, 0);
-	HF_Start();
-}
-``` 
 
 ~ TableFigure { #tab-example1 caption="Dados do exemplo 1" }
 |--------|------------|---------|----------|
@@ -171,6 +148,38 @@ Scheduling simulation, Processor cpu :
 - No deadline missed in the computed scheduling : the task set is schedulable if you computed the scheduling on the feasibility interval.
 ```
 ##Simulador
+``` cpp
+#include <prototypes.h>
+
+int32_t lastTasksTicks[6];
+
+void task(void){
+	int32_t tid;
+
+	tid = HF_CurrentTaskId();
+
+	for (;;){
+		if(lastTasksTicks[tid] != HF_TaskTicks(tid)){
+			lastTasksTicks[tid] = HF_TaskTicks(tid);
+			printf("%d,%d\n", tid,HF_TaskTicks(tid));
+		}
+	}
+}
+
+void ApplicationMain(void){
+	//period,capacity,deadline,description...
+	HF_AddPeriodicTask(task, 10, 3, 10, "task1", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 15, 2, 15, "task2", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 20, 5, 20, "task3", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 25, 5, 25, "task4", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 30, 2, 30, "task5", 2048, 0, 0);
+	HF_Start();
+}
+``` 
+
+![exemp1-simulador]
+[exemp1-simulador]: images/exemp1-simulador.png "exemp1-simulador" { width:auto; max-width:120% }
+
 
 # Exemplo 2
 Neste segundo exemplo foi abordado um cenário onde o algoritmo EDF consiga escalonar todas as tarefas com periodos não harmonicos entre elas e onde o algoritmo RM não consiga realizar o mesmo.  
@@ -227,6 +236,37 @@ Scheduling simulation, Processor cpu :
 ```
 
 ##Simulador
+``` cpp
+#include <prototypes.h>
+
+int32_t lastTasksTicks[6];
+
+void task(void){
+	int32_t tid;
+
+	tid = HF_CurrentTaskId();
+
+	for (;;){
+		if(lastTasksTicks[tid] != HF_TaskTicks(tid)){
+			lastTasksTicks[tid] = HF_TaskTicks(tid);
+			printf("%d,%d\n", tid,HF_TaskTicks(tid));
+		}
+	}
+}
+
+void ApplicationMain(void){
+	//period,capacity,deadline,description...
+	HF_AddPeriodicTask(task, 6, 1, 6, "task1", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 8, 2, 8, "task2", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 17, 3, 17, "task3", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 20, 4, 20, "task4", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 13, 2, 13, "task5", 2048, 0, 0);
+	HF_Start();
+}
+``` 
+![exemp2-simulador]
+[exemp2-simulador]: images/exemp2-simulador.png "exemp2-simulador" { width:auto; max-width:150% }
+
 
 # Exemplo 3
 Neste primeiro exemplo foi abordado um cenário onde ambos algoritmos não consigam escalonar as tarefas por possuír utilização superior a 100%. Objetivo deste caso também é mostrar a diferença da escalonação entre os algoritmos.   
@@ -246,6 +286,7 @@ Neste primeiro exemplo foi abordado um cenário onde ambos algoritmos não consi
 |task5   | 2          | 25      | 25       |
 |--------|------------|---------|----------|
 ~
+
 
 ##RM
 ![exmp3-rm]
@@ -287,6 +328,36 @@ Scheduling simulation, Processor cpu :
 
 ##Simulador
 
+``` cpp
+#include <prototypes.h>
+
+int32_t lastTasksTicks[6];
+
+void task(void){
+	int32_t tid;
+
+	tid = HF_CurrentTaskId();
+
+	for (;;){
+		if(lastTasksTicks[tid] != HF_TaskTicks(tid)){
+			lastTasksTicks[tid] = HF_TaskTicks(tid);
+			printf("%d,%d\n", tid,HF_TaskTicks(tid));
+
+		}
+	}
+}
 
 
+void ApplicationMain(void){
+	//period,capacity,deadline,description...
+	HF_AddPeriodicTask(task, 5, 1, 5, "task1", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 10, 3, 10, "task2", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 15, 3, 15, "task3", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 20, 5, 20, "task4", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 25, 2, 25, "task5", 2048, 0, 0);
+	HF_Start();
+}
+``` 
 
+![exemp3-simulador]
+[exemp3-simulador]: images/exemp3-simulador.png "exemp3-simulador" { width:auto; max-width:150% }
