@@ -73,23 +73,22 @@ para levar em consideração o atributo adicionado na seção [#change1] e
 ``` cpp
 uint8_t HF_TaskReschedule(void){
   ... 
-  if ((HF_task_entry->status == TASK_READY) || (HF_task_entry->status == TASK_NOT_RUN)){	
-			if ((HF_task_entry->next_deadline < j) && (HF_task_entry->capacity_counter > 0)){
+  if ((HF_task_entry->status == TASK_READY) || (HF_task_entry->status == TASK_NOT_RUN)){
+      if ((HF_task_entry->next_deadline < j) && (HF_task_entry->capacity_counter > 0)){
           //if ((HF_task_entry->period < j) && (HF_task_entry->capacity_counter > 0)){
             j = HF_task_entry->next_deadline;   
-         // j = HF_task_entry->period;
-					schedule = i;
-			}
-			if (--HF_task_entry->priority == 0){
-					HF_task_entry->next_tick_count += HF_task_entry->period;
-					HF_task_entry->next_deadline += HF_task_entry->deadline; //Atualiza o próximo deadline
-					HF_task_entry->priority = HF_task_entry->period;
-					if (HF_task_entry->capacity_counter > 0)
-						HF_task_entry->deadline_misses++;
-					HF_task_entry->capacity_counter = HF_task_entry->capacity;
-			}
-
-	}
+          //j = HF_task_entry->period;
+            schedule = i;
+      }
+      if (--HF_task_entry->priority == 0){
+        HF_task_entry->next_tick_count += HF_task_entry->period;
+        HF_task_entry->next_deadline += HF_task_entry->deadline; //Atualiza o próximo deadline
+        HF_task_entry->priority = HF_task_entry->period;
+        if (HF_task_entry->capacity_counter > 0)
+          HF_task_entry->deadline_misses++;
+          HF_task_entry->capacity_counter = HF_task_entry->capacity;
+        }
+  }
   ...
 };
 ```
@@ -121,7 +120,328 @@ Neste primeiro exemplo foi abordado um cenário onde o algoritmo EDF se destaca 
 
 ##RM
 ![exmp1-rm]
-[exmp1-rm]: images/exmp1-rm.png "exmp1-rm" { width:auto; max-width:150% }
+[exmp1-rm]: images/exmp1-rm.png "exmp1-rm" { max-width:150% }
+
+``` 
+Scheduling simulation, Processor cpu : 
+- Number of context switches :  97
+- Number of preemptions :  11
+
+- Task response time computed from simulation : 
+    Task1 => 3/worst 
+    Task2 => 5/worst 
+    Task3 => 10/worst 
+    Task4 => 20/worst 
+    Task5 => 40/worst ,  missed its deadline (absolute deadline =  30 ; completion time =  40)
+- Some task deadlines will be missed : the task set is not schedulable.
+```
+
+##EDF
+![exmp1-edf]
+[exmp1-edf]: images/exmp1-edf.png "exmp1-edf" { max-width:150% }
+
+```
+Scheduling simulation, Processor cpu : 
+- Number of context switches :  95
+- Number of preemptions :  9
+
+- Task response time computed from simulation : 
+    Task1 => 3/worst 
+    Task2 => 5/worst 
+    Task3 => 10/worst 
+    Task4 => 18/worst 
+    Task5 => 25/worst 
+- No deadline missed in the computed scheduling : the task set is schedulable if you computed the scheduling on the feasibility interval.
+```
+##Simulador
+``` cpp
+#include <prototypes.h>
+
+int32_t lastTasksTicks[6];
+
+void task(void){
+	int32_t tid;
+
+	tid = HF_CurrentTaskId();
+
+	for (;;){
+		if(lastTasksTicks[tid] != HF_TaskTicks(tid)){
+			lastTasksTicks[tid] = HF_TaskTicks(tid);
+			printf("%d,%d\n", tid,HF_TaskTicks(tid));
+		}
+	}
+}
+
+void ApplicationMain(void){
+	//period,capacity,deadline,description...
+	HF_AddPeriodicTask(task, 10, 3, 10, "task1", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 15, 2, 15, "task2", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 20, 5, 20, "task3", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 25, 5, 25, "task4", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 30, 2, 30, "task5", 2048, 0, 0);
+	HF_Start();
+}
+``` 
+
+![exemp1-simulador]
+[exemp1-simulador]: images/exemp1-simulador.png "exemp1-simulador" { width:auto; max-width:120% }
+
+
+# Exemplo 2
+Neste segundo exemplo foi abordado um cenário onde o algoritmo EDF consiga escalonar todas as tarefas com periodos não harmonicos entre elas e onde o algoritmo RM não consiga realizar o mesmo.  
+
+~ TableFigure { #tab-example1 caption="Dados do exemplo 2" }
+|--------|------------|---------|----------|
+| Tarefa | Capacidade | Período | Deadline |
++--------|------------|---------|----------+
+| task1  | 1          | 6       | 6        |
++--------|------------|---------|----------+
+| task2  | 2          | 8       | 8        |
++--------|------------|---------|----------+
+| task3  | 3           | 17     |  17      |
++--------|------------|---------|----------+
+| task4  | 4          | 20      | 20       |
+|--------|------------|---------|----------|
+|task5   | 2          | 13      | 13       |
+|--------|------------|---------|----------|
+~
+
+##RM
+![exmp2-rm]
+[exmp2-rm]: images/exmp2-rm.png "exmp2-rm" { width:auto; max-width:150% }
+``` 
+Scheduling simulation, Processor cpu : 
+- Number of context switches :  16170
+- Number of preemptions :  3589
+
+- Task response time computed from simulation : 
+    Task1 => 1/worst 
+    Task2 => 3/worst 
+    Task3 => 11/worst 
+    Task4 => 25/worst ,  missed its deadline (absolute deadline =  20 ; completion time =  24),  missed its deadline (absolute deadline =  40 ; completion time =  45),  missed its deadline (absolute deadline =  980 ; completion time =  981),  missed its deadline (absolute deadline =  1580 ; completion time =  1581),  missed its deadline (absolute deadline =  1620 ; completion time =  1622),  missed its deadline (absolute deadline =  2060 ; completion time =  2064),  missed its deadline (absolute deadline =  2620 ; completion time =  2624),  missed its deadline (absolute deadline =  3140 ; completion time =  3141),  missed its deadline (absolute deadline =  3620 ; completion time =  3621),  missed its deadline (absolute deadline =  4100 ; completion time =  4104),  missed its deadline (absolute deadline =  4220 ; completion time =  4223),  missed its deadline (absolute deadline =  4240 ; completion time =  4244),  missed its deadline (absolute deadline =  4440 ; completion time =  4444),  missed its deadline (absolute deadline =  4660 ; completion time =  4664),  missed its deadline (absolute deadline =  5180 ; completion time =  5181),  missed its deadline (absolute deadline =  5220 ; completion time =  5224),  missed its deadline (absolute deadline =  5660 ; completion time =  5661),  missed its deadline (absolute deadline =  6260 ; completion time =  6263),  missed its deadline (absolute deadline =  6480 ; completion time =  6484),  missed its deadline (absolute deadline =  7220 ; completion time =  7221),  missed its deadline (absolute deadline =  7260 ; completion time =  7264),  missed its deadline (absolute deadline =  7820 ; completion time =  7824),  missed its deadline (absolute deadline =  8300 ; completion time =  8303),  missed its deadline (absolute deadline =  8420 ; completion time =  8422),  missed its deadline (absolute deadline =  8520 ; completion time =  8524),  missed its deadline (absolute deadline =  8860 ; completion time =  8864),  missed its deadline (absolute deadline =  9300 ; completion time =  9304),  missed its deadline (absolute deadline =  9380 ; completion time =  9381),  missed its deadline (absolute deadline =  9420 ; completion time =  9423),  missed its deadline (absolute deadline =  9860 ; completion time =  9864),  missed its deadline (absolute deadline =  10460 ; completion time =  10462),  missed its deadline (absolute deadline =  10900 ; completion time =  10904),  missed its deadline (absolute deadline =  10940 ; completion time =  10941),  missed its deadline (absolute deadline =  11420 ; completion time =  11421),  missed its deadline (absolute deadline =  11460 ; completion time =  11464),  missed its deadline (absolute deadline =  11480 ; completion time =  11484),  missed its deadline (absolute deadline =  11900 ; completion time =  11904),  missed its deadline (absolute deadline =  12020 ; completion time =  12023),  missed its deadline (absolute deadline =  12500 ; completion time =  12502),  missed its deadline (absolute deadline =  12620 ; completion time =  12621),  missed its deadline (absolute deadline =  12980 ; completion time =  12981),  missed its deadline (absolute deadline =  13280 ; completion time =  13284),  missed its deadline (absolute deadline =  13460 ; completion time =  13461),  missed its deadline (absolute deadline =  13500 ; completion time =  13504),  missed its deadline (absolute deadline =  14060 ; completion time =  14064),  missed its deadline (absolute deadline =  14660 ; completion time =  14661),  missed its deadline (absolute deadline =  15020 ; completion time =  15021),  missed its deadline (absolute deadline =  15320 ; completion time =  15324),  missed its deadline (absolute deadline =  15540 ; completion time =  15544),  missed its deadline (absolute deadline =  15620 ; completion time =  15621),  missed its deadline (absolute deadline =  15660 ; completion time =  15663),  missed its deadline (absolute deadline =  16100 ; completion time =  16104),  missed its deadline (absolute deadline =  17180 ; completion time =  17181),  missed its deadline (absolute deadline =  17260 ; completion time =  17262),  missed its deadline (absolute deadline =  17360 ; completion time =  17364),  missed its deadline (absolute deadline =  17660 ; completion time =  17661),  missed its deadline (absolute deadline =  17700 ; completion time =  17704),  missed its deadline (absolute deadline =  17720 ; completion time =  17724),  missed its deadline (absolute deadline =  18140 ; completion time =  18144),  missed its deadline (absolute deadline =  18260 ; completion time =  18263),  missed its deadline (absolute deadline =  19220 ; completion time =  19221),  missed its deadline (absolute deadline =  19300 ; completion time =  19302),  missed its deadline (absolute deadline =  19700 ; completion time =  19701),  missed its deadline (absolute deadline =  19740 ; completion time =  19744),  missed its deadline (absolute deadline =  20300 ; completion time =  20304),  missed its deadline (absolute deadline =  20320 ; completion time =  20325),  missed its deadline (absolute deadline =  21260 ; completion time =  21261),  missed its deadline (absolute deadline =  21340 ; completion time =  21342),  missed its deadline (absolute deadline =  21460 ; completion time =  21461),  missed its deadline (absolute deadline =  21780 ; completion time =  21784),  missed its deadline (absolute deadline =  21860 ; completion time =  21861),  missed its deadline (absolute deadline =  21900 ; completion time =  21903),  missed its deadline (absolute deadline =  22120 ; completion time =  22124),  missed its deadline (absolute deadline =  22340 ; completion time =  22344),  missed its deadline (absolute deadline =  22900 ; completion time =  22904),  missed its deadline (absolute deadline =  23420 ; completion time =  23421),  missed its deadline (absolute deadline =  23500 ; completion time =  23501),  missed its deadline (absolute deadline =  23900 ; completion time =  23901),  missed its deadline (absolute deadline =  23940 ; completion time =  23943),  missed its deadline (absolute deadline =  24160 ; completion time =  24164),  missed its deadline (absolute deadline =  24380 ; completion time =  24384),  missed its deadline (absolute deadline =  24500 ; completion time =  24503),  missed its deadline (absolute deadline =  24520 ; completion time =  24524),  missed its deadline (absolute deadline =  24940 ; completion time =  24944),  missed its deadline (absolute deadline =  25460 ; completion time =  25461),  missed its deadline (absolute deadline =  25540 ; completion time =  25541),  missed its deadline (absolute deadline =  25940 ; completion time =  25941),  missed its deadline (absolute deadline =  26100 ; completion time =  26102)
+    Task5 => 5/worst 
+- Some task deadlines will be missed : the task set is not schedulable.
+```
+
+##EDF
+![exmp2-edf]
+[exmp2-edf]: images/exmp2-edf.png "exmp2-edf" { width:auto; max-width:150% }
+
+```
+Scheduling simulation, Processor cpu : 
+- Number of context switches :  15937
+- Number of preemptions :  3277
+
+- Task response time computed from simulation : 
+    Task1 => 1/worst 
+    Task2 => 3/worst 
+    Task3 => 12/worst 
+    Task4 => 16/worst 
+    Task5 => 9/worst 
+- No deadline missed in the computed scheduling : the task set is schedulable if you computed the scheduling on the feasibility interval.```
+```
+
+##Simulador
+``` cpp
+#include <prototypes.h>
+
+int32_t lastTasksTicks[6];
+
+void task(void){
+	int32_t tid;
+
+	tid = HF_CurrentTaskId();
+
+	for (;;){
+		if(lastTasksTicks[tid] != HF_TaskTicks(tid)){
+			lastTasksTicks[tid] = HF_TaskTicks(tid);
+			printf("%d,%d\n", tid,HF_TaskTicks(tid));
+		}
+	}
+}
+
+Nesta seção será mostrada as adaptações realizadas no kernel para a adaptação do algoritmo EDF.
+
+## Primeira Mudança { #change1 }
+
+Primeramente foi adicionado um atributo para a _Task_ chamado **deadline_counter** 
+e seu objetivo é de armazenar quantas frações de tempo está o próximo deadline da tarefa,
+ este dado será necessário para usar como critério de priorização no algoritmo EDF.
+ 
+* Arquivo: **tcb.h**
+* Linha: 86
+* Tipo: uint16_t
+* Nome do atributo: deadline_counter
+
+``` cpp
+typedef struct{
+  ... 
+  uint16_t next_deadline;// Linha 86
+  ...
+}tcb;
+```
+
+## Segunda Mudança { #change2 }
+
+Após adicionar o atributo, foi populada a informação na hora de adicionar a _Task_ com o valor incial igual ao **deadline** da _Task_
+
+* Arquivo: **ukernel.c**
+* Linha: 537
+* Nome do método: HF_AddPeriodicTask
+
+``` cpp
+int32_t HF_AddPeriodicTask(void (*task)(), uint16_t period, uint16_t capacity, uint16_t deadline, int8_t description[], uint32_t stack_size, uint8_t niceness, uint8_t type){
+  ... 
+  HF_task_entry->next_deadline = deadline; //Linha 537
+  ...
+};
+```
+
+## Terceira Mudança { #change3 }
+
+Após essas mudanças, foi necessário modificar a lógica implementada na hora de realizar o escalonamento das _Tasks_ 
+para levar em consideração o atributo adicionado na seção [#change1] e
+
+* Arquivo: **ukernel.c**
+* Linha: 537
+* Nome do método: HF_TaskReschedule
+
+``` cpp
+uint8_t HF_TaskReschedule(void){
+  ... 
+if ((HF_task_entry->status == TASK_READY) || (HF_task_entry->status == TASK_NOT_RUN)){	
+	if ((HF_task_entry->next_deadline < j) && (HF_task_entry->capacity_counter > 0)){
+        //if ((HF_task_entry->period < j) && (HF_task_entry->capacity_counter > 0)){
+          j = HF_task_entry->next_deadline;   
+       // j = HF_task_entry->period;
+    			schedule = i;
+	}
+	if (--HF_task_entry->priority == 0){
+			HF_task_entry->next_tick_count += HF_task_entry->period;
+			//Atualiza o próximo deadline
+      HF_task_entry->next_deadline += HF_task_entry->deadline;
+			HF_task_entry->priority = HF_task_entry->period;
+			if (HF_task_entry->capacity_counter > 0)
+				HF_task_entry->deadline_misses++;
+				HF_task_entry->capacity_counter = HF_task_entry->capacity;
+	   }
+	}
+  ...
+};
+```
+
+
+# Parte 2
+Abaixo estão descritos três exemplos de escalonamentos comparando os algoritmos.
+
+``` 
+![exemp2-simulador]
+[exemp2-simulador]: images/exemp2-simulador.png "exemp2-simulador" { width:auto; max-width:150% }
+
+
+# Exemplo 3
+Neste primeiro exemplo foi abordado um cenário onde ambos algoritmos não consigam escalonar as tarefas por possuír utilização superior a 100%. Objetivo deste caso também é mostrar a diferença da escalonação entre os algoritmos.   
+
+~ TableFigure { #tab-example1 caption="Dados do exemplo 2" }
+|--------|------------|---------|----------|
+| Tarefa | Capacidade | Período | Deadline |
++--------|------------|---------|----------+
+| task1  | 1          | 5       | 5        |
++--------|------------|---------|----------+
+| task2  | 3          | 10       | 10       |
++--------|------------|---------|----------+
+| task3  | 3          | 15     |  15      |
++--------|------------|---------|----------+
+| task4  | 5          | 20      | 20       |
+|--------|------------|---------|----------|
+|task5   | 2          | 25      | 25       |
+|--------|------------|---------|----------|
+~
+
+
+##RM
+![exmp3-rm]
+
+[exmp3-rm]: images/exmp3-rm.png "exmp3-rm" { width:auto; max-width:150% }
+
+``` 
+Scheduling simulation, Processor cpu : 
+- Number of context switches :  179
+- Number of preemptions :  52
+
+- Task response time computed from simulation : 
+    Task1 => 1/worst 
+    Task2 => 4/worst 
+    Task3 => 8/worst 
+    Task4 => 20/worst 
+    Task5 => 175/worst ,  missed its deadline (absolute deadline =  25 ; completion time =  59),  missed its deadline (absolute deadline =  50 ; completion time =  118),  missed its deadline (absolute deadline =  75 ; completion time =  160),  missed its deadline (absolute deadline =  100 ; completion time =  219),  missed its deadline (absolute deadline =  125 ; completion time =  270),  missed its deadline (absolute deadline =  150 ; completion time =  300)
+- Some task deadlines will be missed : the task set is not schedulable.
+```
+
+##EDF
+![exmp3-edf]
+
+[exmp3-edf]: images/exmp3-edf.png "exmp3-edf" { width:auto; max-width:150% }
+
+```
+Scheduling simulation, Processor cpu : 
+- Number of context switches :  123
+- Number of preemptions :  10
+
+- Task response time computed from simulation : 
+    Task1 => 24/worst ,  missed its deadline (absolute deadline =  85 ; completion time =  87),  missed its deadline (absolute deadline =  105 ; completion time =  109),  missed its deadline (absolute deadline =  110 ; completion time =  113),  missed its deadline (absolute deadline =  115 ; completion time =  117),  missed its deadline (absolute deadline =  125 ; completion time =  129),  missed its deadline (absolute deadline =  130 ; completion time =  135),  missed its deadline (absolute deadline =  135 ; completion time =  139),  missed its deadline (absolute deadline =  140 ; completion time =  143),  missed its deadline (absolute deadline =  145 ; completion time =  151),  missed its deadline (absolute deadline =  150 ; completion time =  152),  missed its deadline (absolute deadline =  155 ; completion time =  164),  missed its deadline (absolute deadline =  160 ; completion time =  165),  missed its deadline (absolute deadline =  165 ; completion time =  173),  missed its deadline (absolute deadline =  170 ; completion time =  177),  missed its deadline (absolute deadline =  175 ; completion time =  181),  missed its deadline (absolute deadline =  180 ; completion time =  187),  missed its deadline (absolute deadline =  185 ; completion time =  198),  missed its deadline (absolute deadline =  190 ; completion time =  199),  missed its deadline (absolute deadline =  195 ; completion time =  203),  missed its deadline (absolute deadline =  200 ; completion time =  207),  missed its deadline (absolute deadline =  205 ; completion time =  220),  missed its deadline (absolute deadline =  210 ; completion time =  221),  missed its deadline (absolute deadline =  215 ; completion time =  228),  missed its deadline (absolute deadline =  220 ; completion time =  229),  missed its deadline (absolute deadline =  225 ; completion time =  237),  missed its deadline (absolute deadline =  230 ; completion time =  246),  missed its deadline (absolute deadline =  235 ; completion time =  250),  missed its deadline (absolute deadline =  240 ; completion time =  251),  missed its deadline (absolute deadline =  245 ; completion time =  262),  missed its deadline (absolute deadline =  250 ; completion time =  263),  missed its deadline (absolute deadline =  255 ; completion time =  272),  missed its deadline (absolute deadline =  260 ; completion time =  276),  missed its deadline (absolute deadline =  265 ; completion time =  284),  missed its deadline (absolute deadline =  270 ; completion time =  285),  missed its deadline (absolute deadline =  275 ; completion time =  292),  missed its deadline (absolute deadline =  280 ; completion time =  298)
+    Task2 => 29/worst ,  missed its deadline (absolute deadline =  80 ; completion time =  82),  missed its deadline (absolute deadline =  90 ; completion time =  91),  missed its deadline (absolute deadline =  110 ; completion time =  116),  missed its deadline (absolute deadline =  120 ; completion time =  121),  missed its deadline (absolute deadline =  130 ; completion time =  138),  missed its deadline (absolute deadline =  140 ; completion time =  146),  missed its deadline (absolute deadline =  150 ; completion time =  155),  missed its deadline (absolute deadline =  160 ; completion time =  168),  missed its deadline (absolute deadline =  170 ; completion time =  180),  missed its deadline (absolute deadline =  180 ; completion time =  190),  missed its deadline (absolute deadline =  190 ; completion time =  202),  missed its deadline (absolute deadline =  200 ; completion time =  210),  missed its deadline (absolute deadline =  210 ; completion time =  224),  missed its deadline (absolute deadline =  220 ; completion time =  232),  missed its deadline (absolute deadline =  230 ; completion time =  249),  missed its deadline (absolute deadline =  240 ; completion time =  254),  missed its deadline (absolute deadline =  250 ; completion time =  266),  missed its deadline (absolute deadline =  260 ; completion time =  279),  missed its deadline (absolute deadline =  270 ; completion time =  288)
+    Task3 => 36/worst ,  missed its deadline (absolute deadline =  90 ; completion time =  94),  missed its deadline (absolute deadline =  105 ; completion time =  112),  missed its deadline (absolute deadline =  120 ; completion time =  124),  missed its deadline (absolute deadline =  135 ; completion time =  142),  missed its deadline (absolute deadline =  150 ; completion time =  158),  missed its deadline (absolute deadline =  165 ; completion time =  176),  missed its deadline (absolute deadline =  180 ; completion time =  193),  missed its deadline (absolute deadline =  195 ; completion time =  206),  missed its deadline (absolute deadline =  210 ; completion time =  227),  missed its deadline (absolute deadline =  225 ; completion time =  240),  missed its deadline (absolute deadline =  240 ; completion time =  257),  missed its deadline (absolute deadline =  255 ; completion time =  275),  missed its deadline (absolute deadline =  270 ; completion time =  291)
+    Task4 => 43/worst ,  missed its deadline (absolute deadline =  60 ; completion time =  64),  missed its deadline (absolute deadline =  80 ; completion time =  86),  missed its deadline (absolute deadline =  100 ; completion time =  103),  missed its deadline (absolute deadline =  120 ; completion time =  128),  missed its deadline (absolute deadline =  140 ; completion time =  150),  missed its deadline (absolute deadline =  160 ; completion time =  172),  missed its deadline (absolute deadline =  180 ; completion time =  197),  missed its deadline (absolute deadline =  200 ; completion time =  214),  missed its deadline (absolute deadline =  220 ; completion time =  236),  missed its deadline (absolute deadline =  240 ; completion time =  261),  missed its deadline (absolute deadline =  260 ; completion time =  283)
+    Task5 => 47/worst ,  missed its deadline (absolute deadline =  50 ; completion time =  52),  missed its deadline (absolute deadline =  75 ; completion time =  78),  missed its deadline (absolute deadline =  100 ; completion time =  108),  missed its deadline (absolute deadline =  125 ; completion time =  134),  missed its deadline (absolute deadline =  150 ; completion time =  163),  missed its deadline (absolute deadline =  175 ; completion time =  186),  missed its deadline (absolute deadline =  200 ; completion time =  219),  missed its deadline (absolute deadline =  225 ; completion time =  245),  missed its deadline (absolute deadline =  250 ; completion time =  271),  missed its deadline (absolute deadline =  275 ; completion time =  297)
+- Some task deadlines will be missed : the task set is not schedulable.
+```
+
+##Simulador
+
+``` cpp
+#include <prototypes.h>
+
+int32_t lastTasksTicks[6];
+
+void task(void){
+	int32_t tid;
+
+	tid = HF_CurrentTaskId();
+
+	for (;;){
+		if(lastTasksTicks[tid] != HF_TaskTicks(tid)){
+			lastTasksTicks[tid] = HF_TaskTicks(tid);
+			printf("%d,%d\n", tid,HF_TaskTicks(tid));
+
+		}
+	}
+}
+~ End Remote
+# Exemplo 1
+Neste primeiro exemplo foi abordado um cenário onde o algoritmo EDF se destaca em relação ao RM por conseguir escalonar todas as tarefas por utilizar periodos harmonicos entre as tarefas.  
+
+~ TableFigure { #tab-example1 caption="Dados do exemplo 1" }
+|--------|------------|---------|----------|
+| Tarefa | Capacidade | Período | Deadline |
++--------|------------|---------|----------+
+| task1  | 3          | 10      | 10       |
++--------|------------|---------|----------+
+| task2  | 2          | 15      | 15       |
++--------|------------|---------|----------+
+| task3  | 5          | 20      | 20       |
++--------|------------|---------|----------+
+| task4  | 5          | 25      | 25       |
+|--------|------------|---------|----------|
+|task5   | 2          | 30      | 30       |
+|--------|------------|---------|----------|
+~
+
+
+
+##RM
+![exmp1-rm]
+[exmp1-rm]: images/exmp1-rm.png "exmp1-rm" { max-width:150% }
 
 ``` 
 Scheduling simulation, Processor cpu : 
@@ -349,11 +669,11 @@ void task(void){
 		if(lastTasksTicks[tid] != HF_TaskTicks(tid)){
 			lastTasksTicks[tid] = HF_TaskTicks(tid);
 			printf("%d,%d\n", tid,HF_TaskTicks(tid));
+<!-- end merge -->
 
 		}
 	}
 }
-
 
 void ApplicationMain(void){
 	//period,capacity,deadline,description...
@@ -365,6 +685,23 @@ void ApplicationMain(void){
 	HF_Start();
 }
 ``` 
+
+<!-- begin merge (remove this line to resolve the conflict) -->
+~ Begin Remote
+![exemp3-simulador]
+[exemp3-simulador]: images/exemp3-simulador.png "exemp3-simulador" { width:auto; max-width:150% }
+~ End Remote
+void ApplicationMain(void){
+	//period,capacity,deadline,description...
+	HF_AddPeriodicTask(task, 5, 1, 5, "task1", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 10, 3, 10, "task2", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 15, 3, 15, "task3", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 20, 5, 20, "task4", 2048, 0, 0);
+	HF_AddPeriodicTask(task, 25, 2, 25, "task5", 2048, 0, 0);
+	HF_Start();
+}
+``` 
+<!-- end merge -->
 
 ![exemp3-simulador]
 [exemp3-simulador]: images/exemp3-simulador.png "exemp3-simulador" { width:auto; max-width:150% }
