@@ -1,0 +1,86 @@
+Title         : Sistemas Embarcados - Trabalho Prático I
+Author        : Italo Qualisoni
+Affiliation   : PUCRS
+Email         : italo.qualisoni@acad.pucrs.br
+Logo          : False
+
+[TITLE]
+# Algoritmos  { #sec-algoritmo }
+
+##RM { #sec-algoritmo-rm }
+
+##EDF { #sec-algoritmo-edf }
+
+# Vantagens
+
+# Parte 1 
+
+Nesta seção será mostrada as adaptações realizadas no kernel para a adaptação do algoritmo EDF.
+
+## Primeira Mudança { #change1 }
+
+Primeramente foi adicionado um atributo para a _Task_ chamado **deadline_counter** 
+e seu objetivo é de armazenar quantas frações de tempo está o próximo deadline da tarefa,
+ este dado será necessário para usar como critério de priorização no algoritmo EDF.
+ 
+* Arquivo: **tcb.h**
+* Linha: 86
+* Tipo: uint16_t
+* Nome do atributo: deadline_counter
+
+``` csharp
+typedef struct{
+  ... 
+  uint16_t next_deadline;			// Linha 86
+  ...
+}tcb;
+```
+
+## Segunda Mudança { #change2 }
+
+Após adicionar o atributo, foi populada a informação na hora de adicionar a _Task_ com o valor incial igual ao **deadline** da _Task_
+
+* Arquivo: **ukernel.c**
+* Linha: 537
+* Nome do método: HF_AddPeriodicTask
+
+``` csharp
+int32_t HF_AddPeriodicTask(void (*task)(), uint16_t period, uint16_t capacity, uint16_t deadline, int8_t description[], uint32_t stack_size, uint8_t niceness, uint8_t type){
+  ... 
+  HF_task_entry->next_deadline = deadline; //Linha 537
+  ...
+};
+```
+
+## Terceira Mudança { #change3 }
+
+Após essas mudanças, foi necessário modificar a lógica implementada na hora de realizar o escalonamento das _Tasks_ 
+para levar em consideração o atributo adicionado na seção [#change1] e
+
+* Arquivo: **ukernel.c**
+* Linha: 537
+* Nome do método: HF_TaskReschedule
+
+``` csharp
+uint8_t HF_TaskReschedule(void){
+  ... 
+  if ((HF_task_entry->status == TASK_READY) || (HF_task_entry->status == TASK_NOT_RUN)){	
+			if ((HF_task_entry->next_deadline < j) && (HF_task_entry->capacity_counter > 0)){
+          //if ((HF_task_entry->period < j) && (HF_task_entry->capacity_counter > 0)){
+            j = HF_task_entry->next_deadline;   
+         // j = HF_task_entry->period;
+					schedule = i;
+			}
+			if (--HF_task_entry->priority == 0){
+					HF_task_entry->next_tick_count += HF_task_entry->period;
+					HF_task_entry->next_deadline += HF_task_entry->deadline; //Atualiza o próximo deadline
+					HF_task_entry->priority = HF_task_entry->period;
+					if (HF_task_entry->capacity_counter > 0)
+						HF_task_entry->deadline_misses++;
+					HF_task_entry->capacity_counter = HF_task_entry->capacity;
+			}
+
+	}
+  ...
+};
+```
