@@ -28,14 +28,14 @@ Nesta seção será mostrada as adaptações realizadas no kernel para a adapta�
 
 ## Primeira Mudança { #change1 }
 
-Primeramente foi adicionado um atributo para a _Task_ chamado **deadline_counter** 
-e seu objetivo é de armazenar quantas frações de tempo está o próximo deadline da tarefa,
+Primeramente foi adicionado um atributo para a _Task_ chamado **next_deadline** e seu objetivo é de armazenar quantas frações de tempo está o próximo deadline da tarefa,
  este dado será necessário para usar como critério de priorização no algoritmo EDF.
- 
-* Arquivo: **tcb.h**
+
+* Arquivo: **ukernel.c**
 * Linha: 86
 * Tipo: uint16_t
-* Nome do atributo: deadline_counter
+* Nome do atributo: next_deadline
+
 
 ``` cpp
 typedef struct{
@@ -181,7 +181,7 @@ void ApplicationMain(void){
 ``` 
 
 ![exemp1-simulador]
-[exemp1-simulador]: images/exemp1-simulador.png "exemp1-simulador" { width:auto; max-width:120% }
+[exemp1-simulador]: images/exemp1-simulador.png "exemp1-simulador" { width:auto; max-width:100% }
 
 
 # Exemplo 2
@@ -270,7 +270,7 @@ void ApplicationMain(void){
 ```
 
 ![exemp2-simulador]
-[exemp2-simulador]: images/exemp2-simulador.png "exemp2-simulador" { width:auto; max-width:150% }
+[exemp2-simulador]: images/exemp2-simulador.png "exemp2-simulador" { width:auto; max-width:100% }
 
 
 # Exemplo 3
@@ -363,4 +363,4 @@ void ApplicationMain(void){
 ```
 
 ![exemp3-simulador]
-[exemp3-simulador]: images/exemp3-simulador.png "exemp3-simulador" { width:auto; max-width:150% }
+[exemp3-simulador]: images/exemp3-simulador.png "exemp3-simulador" { width:auto; max-width:100% }
