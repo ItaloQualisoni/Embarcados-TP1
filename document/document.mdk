@@ -121,7 +121,7 @@ Neste primeiro exemplo foi abordado um cenário onde o algoritmo EDF se destaca 
 
 ##RM
 ![exmp1-rm]
-[exmp1-rm]: images/exmp1-rm.png "exmp1-rm" { max-width:150% }
+[exmp1-rm]: images/exmp1-rm.png "exmp1-rm" { width:auto; max-width:150% }
 
 ``` 
 Scheduling simulation, Processor cpu : 
